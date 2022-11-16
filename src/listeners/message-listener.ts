@@ -1,5 +1,5 @@
 import { Client } from 'discord.js'
-import { Listener } from '../interfaces/listener'
+import { Listener } from './listener'
 
 class MessageListener implements Listener {
     public start (client: Client): void {
