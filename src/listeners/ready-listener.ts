@@ -1,13 +1,14 @@
 import { Client } from 'discord.js'
+import { Logger } from '../util/logger'
 import { Listener } from './listener'
 
 class ReadyListener implements Listener {
-    public start(client: Client): void {
+    public attachClient(client: Client): void {
         client.on('ready', () => {
             if (!client.user || !client.application) {
                 return
             }
-            console.log(`${client.user.username} is online`)
+            Logger.log(`${client.user.username} is online`)
         })
     }
 }

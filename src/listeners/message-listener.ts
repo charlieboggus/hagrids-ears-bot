@@ -1,10 +1,11 @@
 import { Client } from 'discord.js'
+import { Logger } from '../util/logger'
 import { Listener } from './listener'
 
 class MessageListener implements Listener {
-    public start (client: Client): void {
+    public attachClient (client: Client): void {
         client.on('messageCreate', async (message) => {
-            console.log(message.content)
+            Logger.log(`Received message: ${message.content}`)
             // we want to do shit with recording  messages here... call the firehose? save to s3? we will figure it out
         })
     }
