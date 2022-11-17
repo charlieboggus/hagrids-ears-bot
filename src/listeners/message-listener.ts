@@ -9,9 +9,8 @@ let messageBatch: string[] = []
 class MessageListener implements Listener {
     public attachClient(client: Client, appState: AppState): void {
         client.on('messageCreate', async (receivedMessage) => {
-            const message: string = receivedMessage.content
-            if (message === '$start' || message === '$stop') {
-                const command = message.slice(1)
+            if (this.isMessageCommand(receivedMessage.content)) {
+                const command = receivedMessage.content.slice(1)
                 if (command === 'start') {
                     appState.shouldListen = true
                     Logger.log('Hagrid has started listening')
@@ -60,6 +59,17 @@ class MessageListener implements Listener {
         }
         else {
             Logger.log('Hagrid isnt listening...')
+        }
+    }
+
+    private isMessageCommand(message: string): boolean {
+        switch (message) {
+            case "$start":
+                return true
+            case "$stop":
+                return true
+            default:
+                return false
         }
     }
 
