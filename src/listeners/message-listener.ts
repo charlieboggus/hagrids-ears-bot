@@ -29,9 +29,8 @@ class MessageListener implements Listener {
 
     private handleMessage(message: Message<boolean>, appState: AppState) {
         if (appState.shouldListen) {
-            Logger.log(`Received message: ${message.content}`)
             const messageBatchSize: number = parseInt(process.env.MESSAGE_BATCH_SIZE as string) ?? 10000
-            if (messageBatch.length > 1000) {
+            if (messageBatch.length > 500) {
                 Logger.error('message batch overflow error!')
                 messageBatch = []
                 return
@@ -56,7 +55,7 @@ class MessageListener implements Listener {
                     messageBatch.push(message.content)
                     Logger.log(`Batched message: ${message.content}`)
                 }
-                Logger.log(JSON.stringify(messageBatch))
+                Logger.log(`Current batch (${messageBatch.length}): ${JSON.stringify(messageBatch)}`)
             }
         }
         else {
