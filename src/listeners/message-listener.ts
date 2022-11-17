@@ -1,30 +1,45 @@
-import { Client } from 'discord.js'
-import { LambdaClient } from '../clients/lambda-client'
+import { Client, Message } from 'discord.js'
+import { AppState } from '../app'
+import { S3Client } from '../clients/s3-client'
 import { Logger } from '../util/logger'
 import { Listener } from './listener'
 
 let messageBatch: string[] = []
 
 class MessageListener implements Listener {
-    public attachClient (client: Client): void {
-        client.on('messageCreate', async (message) => {
+    public attachClient(client: Client, appState: AppState): void {
+        client.on('messageCreate', async (receivedMessage) => {
+            const message: string = receivedMessage.content
+            if (message === '$start' || message === '$stop') {
+                const command = message.slice(1)
+                if (command === 'start') {
+                    appState.shouldListen = true
+                    Logger.log('Hagrid has started listening')
+                }
+                else if (command === 'stop') {
+                    appState.shouldListen = false
+                    Logger.log('Hagrid has stopped listening')
+                }
+            }
+            else {
+                this.handleMessage(receivedMessage, appState)
+            }
+        })
+    }
+
+    private handleMessage(message: Message<boolean>, appState: AppState) {
+        if (appState.shouldListen) {
             Logger.log(`Received message: ${message.content}`)
-
-            // if we can't read the batch size from env we default to a value that we'll never reach so it'll block lambda invocation
-            const messageBatchSize: number = parseInt(process.env.MESSAGE_BATCH_SIZE as string) ?? 1000
-            Logger.log(`batch size: ${messageBatchSize}`)
-
-            // if something goes wrong and we can't send the message batch we should abort and abandon in order to save memory
-            if (messageBatch.length > 500) {
+            const messageBatchSize: number = parseInt(process.env.MESSAGE_BATCH_SIZE as string) ?? 10000
+            if (messageBatch.length > 1000) {
                 Logger.error('message batch overflow error!')
                 messageBatch = []
                 return
             }
 
-            // If all goes well we can proceed to processing batches
             if (messageBatch.length > messageBatchSize) {
-                const lambdaClient: LambdaClient = new LambdaClient()
-                lambdaClient.invoke(JSON.stringify(messageBatch))
+                const s3Client: S3Client = new S3Client()
+                s3Client.invoke(JSON.stringify(messageBatch))
                 Logger.log(`Sent batch to Lambda function: ${messageBatch}`)
                 messageBatch = []
             }
@@ -41,13 +56,17 @@ class MessageListener implements Listener {
                     messageBatch.push(message.content)
                     Logger.log(`Batched message: ${message.content}`)
                 }
+                Logger.log(JSON.stringify(messageBatch))
             }
-        })
+        }
+        else {
+            Logger.log('Hagrid isnt listening...')
+        }
     }
 
     private isUrl(message: string): boolean {
         const pattern = new RegExp(
-            '^(https?:\\/\\/)?'+                                    // protocol
+            '^(https?:\\/\\/)?' +                                    // protocol
             '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' +    // domain name
             '((\\d{1,3}\\.){3}\\d{1,3}))' +                         // OR ip (v4) address
             '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' +                     // port and path
