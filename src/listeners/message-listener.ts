@@ -9,7 +9,9 @@ class MessageListener implements Listener {
     public attachClient (client: Client): void {
         client.on('messageCreate', async (message) => {
             Logger.log(`Received message: ${message.content}`)
-            const messageBatchSize: number = parseInt(process.env.MESSAGE_BATCH_SIZE as string) ?? 0
+
+            // if we can't read the batch size from env we default to a value that we'll never reach so it'll block lambda invocation
+            const messageBatchSize: number = parseInt(process.env.MESSAGE_BATCH_SIZE as string) ?? 1000
             Logger.log(`batch size: ${messageBatchSize}`)
 
             // if something goes wrong and we can't send the message batch we should abort and abandon in order to save memory
