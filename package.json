@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/charlieboggus/hagrids-ears-bot#readme",
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.108",
     "@types/node": "^18.11.9",
     "rimraf": "^3.0.2",
     "ts-node": "^10.9.1",
