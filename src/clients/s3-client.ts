@@ -9,7 +9,7 @@ export class S3Client {
             Key: this.generateKey(),
             Body: payload
         }
-        const client = new AWS.S3({ region: 'us-east-1' })
+        const client = new AWS.S3({ region: process.env.AWS_REGION ?? 'us-east-1' })
         client.putObject(params, (err, data) => {
             if (err) {
                 Logger.error(`Failed to store data in S3 bucket: ${JSON.stringify(err)}`)
