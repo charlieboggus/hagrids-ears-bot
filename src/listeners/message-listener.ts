@@ -6,15 +6,16 @@ import { Listener } from './listener'
 import { MessageData } from '../api/message-data'
 import { SNSClient } from '../clients/sns-client'
 
-let messageBatch: MessageData[] = []
-
 export class MessageListener implements Listener {
+
+    private messageBatch: MessageData[] = []
+
     public attachClient(client: Client, appState: AppState): void {
         client.on('messageCreate', async (receivedMessage) => {
             const snsClient: SNSClient = new SNSClient()
             if (this.isMessageCommand(receivedMessage.content)) {
                 const command = receivedMessage.content.slice(1)
-                if (command === 'start' && receivedMessage.author.id) {
+                if (command === 'start') {
                     appState.shouldListen = true
                     Logger.log('Hagrid has started listening')
                     snsClient.publish('Hagrid has started listening')
@@ -34,17 +35,17 @@ export class MessageListener implements Listener {
     private handleMessage(message: Message<boolean>, appState: AppState) {
         if (appState.shouldListen) {
             const messageBatchSize: number = parseInt(process.env.MESSAGE_BATCH_SIZE as string) ?? 10000
-            if (messageBatch.length > 500) {
+            if (this.messageBatch.length > 500) {
                 Logger.error('message batch overflow error!')
-                messageBatch = []
+                this.messageBatch = []
                 return
             }
 
-            if (messageBatch.length > messageBatchSize) {
+            if (this.messageBatch.length > messageBatchSize) {
                 const s3Client: S3Client = new S3Client()
-                s3Client.putObject(JSON.stringify(messageBatch))
-                Logger.log(`Sent batch to Lambda function: ${JSON.stringify(messageBatch)}`)
-                messageBatch = []
+                s3Client.putObject(JSON.stringify(this.messageBatch))
+                Logger.log(`Sent batch to Lambda function: ${JSON.stringify(this.messageBatch)}`)
+                this.messageBatch = []
             }
             else {
                 // filter out attachments as they won't help us in training our model
@@ -60,7 +61,7 @@ export class MessageListener implements Listener {
                         message: message.content,
                         author: message.author.username
                     }
-                    messageBatch.push(messageData)
+                    this.messageBatch.push(messageData)
                 }
             }
         }
