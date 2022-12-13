@@ -2,7 +2,7 @@ import * as AWS from 'aws-sdk'
 import { Logger } from '../util/logger'
 
 export class S3Client {
-    public async invoke(payload: string): Promise<void> {
+    public async putObject(payload: string): Promise<void> {
         const bucketName: string = process.env.BUCKET_NAME ?? ''
         const params = {
             Bucket: bucketName,
