@@ -1,8 +1,8 @@
 import { Client } from 'discord.js'
 import { discordClient } from './client'
 import { Listener } from './listeners/listener'
-import { readyListener } from './listeners/ready-listener'
-import { messageListener } from './listeners/message-listener'
+import { ReadyListener } from './listeners/ready-listener'
+import { MessageListener } from './listeners/message-listener'
 import * as dotenv from 'dotenv'
 dotenv.config()
 
@@ -24,8 +24,9 @@ class App {
     }
 }
 
+// initialize our application with whatever listeners we want to use
 const app = new App(discordClient, [
-    readyListener, 
-    messageListener
+    new ReadyListener(), 
+    new MessageListener()
 ])
 app.start(new AppState())

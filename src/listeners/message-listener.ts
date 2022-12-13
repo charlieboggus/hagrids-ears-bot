@@ -3,21 +3,26 @@ import { AppState } from '../app'
 import { S3Client } from '../clients/s3-client'
 import { Logger } from '../util/logger'
 import { Listener } from './listener'
+import { MessageData } from '../api/message-data'
+import { SNSClient } from '../clients/sns-client'
 
-let messageBatch: string[] = []
+let messageBatch: MessageData[] = []
 
-class MessageListener implements Listener {
+export class MessageListener implements Listener {
     public attachClient(client: Client, appState: AppState): void {
         client.on('messageCreate', async (receivedMessage) => {
+            const snsClient: SNSClient = new SNSClient()
             if (this.isMessageCommand(receivedMessage.content)) {
                 const command = receivedMessage.content.slice(1)
-                if (command === 'start') {
+                if (command === 'start' && receivedMessage.author.id) {
                     appState.shouldListen = true
                     Logger.log('Hagrid has started listening')
+                    snsClient.publish('Hagrid has started listening')
                 }
                 else if (command === 'stop') {
                     appState.shouldListen = false
                     Logger.log('Hagrid has stopped listening')
+                    snsClient.publish('Hagrid has stopped listening!')
                 }
             }
             else {
@@ -37,8 +42,8 @@ class MessageListener implements Listener {
 
             if (messageBatch.length > messageBatchSize) {
                 const s3Client: S3Client = new S3Client()
-                s3Client.invoke(JSON.stringify(messageBatch))
-                Logger.log(`Sent batch to Lambda function: ${messageBatch}`)
+                s3Client.putObject(JSON.stringify(messageBatch))
+                Logger.log(`Sent batch to Lambda function: ${JSON.stringify(messageBatch)}`)
                 messageBatch = []
             }
             else {
@@ -51,10 +56,12 @@ class MessageListener implements Listener {
                     Logger.log(`Ignored message as it contains a url`)
                 }
                 else {
-                    messageBatch.push(message.content)
-                    Logger.log(`Batched message: ${message.content}`)
+                    const messageData: MessageData = {
+                        message: message.content,
+                        author: message.author.username
+                    }
+                    messageBatch.push(messageData)
                 }
-                Logger.log(`Current batch (${messageBatch.length}): ${JSON.stringify(messageBatch)}`)
             }
         }
         else {
@@ -85,4 +92,3 @@ class MessageListener implements Listener {
         return pattern.test(message)
     }
 }
-export const messageListener = new MessageListener()
