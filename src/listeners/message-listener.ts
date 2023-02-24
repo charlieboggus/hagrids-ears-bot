@@ -61,7 +61,10 @@ export class MessageListener implements Listener {
                         message: message.content,
                         author: message.author.username
                     }
-                    this.messageBatch.push(messageData)
+                    // limit the fucking characters to maybe fix some bugs idfk
+                    if (messageData.message.length < 750) {
+                        this.messageBatch.push(messageData)
+                    }
                 }
             }
         }
