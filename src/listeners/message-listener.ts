@@ -15,12 +15,12 @@ export class MessageListener implements Listener {
             const snsClient: SNSClient = new SNSClient()
             if (this.isMessageCommand(receivedMessage.content)) {
                 const command = receivedMessage.content.slice(1)
-                if (command === 'start') {
+                if (command === 'start' && receivedMessage.author.id === process.env.USER_ID) {
                     appState.shouldListen = true
                     Logger.log('Hagrid has started listening')
                     snsClient.publish('Hagrid has started listening')
                 }
-                else if (command === 'stop') {
+                else if (command === 'stop' && receivedMessage.author.id === process.env.USER_ID) {
                     appState.shouldListen = false
                     Logger.log('Hagrid has stopped listening')
                     snsClient.publish('Hagrid has stopped listening!')
@@ -42,7 +42,7 @@ export class MessageListener implements Listener {
             }
 
             if (this.messageBatch.length > messageBatchSize) {
-                const s3Client: S3Client = new S3Client()
+                const s3Client: S3Client = new S3Client(process.env.MESSAGE_DATA_BUCKET ?? '')
                 s3Client.putObject(JSON.stringify(this.messageBatch))
                 Logger.log(`Sent batch to Lambda function: ${JSON.stringify(this.messageBatch)}`)
                 this.messageBatch = []
@@ -61,7 +61,10 @@ export class MessageListener implements Listener {
                         message: message.content,
                         author: message.author.username
                     }
-                    this.messageBatch.push(messageData)
+                    // limit the fucking characters to maybe fix some bugs idfk
+                    if (messageData.message.length < 750) {
+                        this.messageBatch.push(messageData)
+                    }
                 }
             }
         }

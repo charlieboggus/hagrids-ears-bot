@@ -2,10 +2,12 @@ import * as AWS from 'aws-sdk'
 import { Logger } from '../util/logger'
 
 export class S3Client {
+
+    constructor (private readonly bucketName: string) {}
+
     public async putObject(payload: string): Promise<void> {
-        const bucketName: string = process.env.BUCKET_NAME ?? ''
         const params = {
-            Bucket: bucketName,
+            Bucket: this.bucketName,
             Key: this.generateKey(),
             Body: payload
         }
