@@ -41,15 +41,6 @@ export class VoiceChannelListener implements Listener {
                         }
                     }
 
-                    /**
-                     * 
-                     * TODO:
-                     *    - does this code even work?
-                     *    - need to make the voice chat data bucket in S3 and figure out any IAM permissions
-                     *    - need to figure out how to SCP or whatever protocol into the EC2 instance to upload ./dist
-                     * 
-                     */
-
                     if (this.userCount === 0) {
                         // send voice session data to S3
                         const voiceSessionBatch: UserVoiceSessionData[] = []
@@ -68,6 +59,8 @@ export class VoiceChannelListener implements Listener {
 
                 if (oldState.channelId && newState.channelId !== oldState.channelId) {
                     // user moved voice channels -- figure out if i want to utilize this
+                    // this could lead to some interesting data, but I want to get basic functionality
+                    // working first
                 }
             })
         }
