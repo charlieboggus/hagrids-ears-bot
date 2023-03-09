@@ -17,15 +17,17 @@ export class VoiceChannelListener implements Listener {
                 if (!oldState.channelId) {
                     this.userCount++
                     const user = newState.member
-                    const userDisplayName = user? user.displayName : ''
-                    if (user && !this.voiceSession.has(userDisplayName)) {
-                        const userVoiceSessionData: UserVoiceSessionData = {
-                            joinedTimestamp: Date.now(),
-                            leaveTimestamp: -1,
-                            userId: user.id,
-                            userDisplayName: user.displayName
+                    if (user) {
+                        const displayName: string = user.displayName
+                        if (!this.voiceSession.has(displayName)) {
+                            const userVoiceSessionData: UserVoiceSessionData = {
+                                joinedTimestamp: Date.now(),
+                                leaveTimestamp: -1,
+                                userId: user.id,
+                                userDisplayName: displayName
+                            }
+                            this.voiceSession.set(displayName, userVoiceSessionData)
                         }
-                        this.voiceSession.set(userDisplayName, userVoiceSessionData)
                     }
                 }
 
@@ -38,11 +40,11 @@ export class VoiceChannelListener implements Listener {
                         const userVoiceSessionData: UserVoiceSessionData | undefined = this.voiceSession.get(displayName)
                         if (userVoiceSessionData) {
                             userVoiceSessionData.leaveTimestamp = Date.now()
+                            this.voiceSession.set(displayName, userVoiceSessionData)
                         }
                     }
 
                     if (this.userCount === 0) {
-                        // send voice session data to S3
                         const voiceSessionBatch: UserVoiceSessionData[] = []
                         for (const userData of this.voiceSession.values()) {
                             voiceSessionBatch.push(userData)
@@ -51,8 +53,6 @@ export class VoiceChannelListener implements Listener {
                         const s3Client: S3Client = new S3Client(process.env.VOICE_DATA_BUCKET ?? '')
                         s3Client.putObject(payload)
                         Logger.log(`Sent batch to Lambda function: ${payload}`)
-
-                        // clear once the voice session ends. we  don't need the session to linger in memory
                         this.voiceSession = new Map()
                     }
                 }
