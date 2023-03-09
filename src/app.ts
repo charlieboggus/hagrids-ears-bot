@@ -3,8 +3,8 @@ import { discordClient } from './client'
 import { Listener } from './listeners/listener'
 import { ReadyListener } from './listeners/ready-listener'
 import { MessageListener } from './listeners/message-listener'
-import * as dotenv from 'dotenv'
 import { VoiceChannelListener } from './listeners/voice-channel-listener'
+import * as dotenv from 'dotenv'
 dotenv.config()
 
 export class AppState {
