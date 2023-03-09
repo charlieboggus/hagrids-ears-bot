@@ -3,6 +3,7 @@ import { discordClient } from './client'
 import { Listener } from './listeners/listener'
 import { ReadyListener } from './listeners/ready-listener'
 import { MessageListener } from './listeners/message-listener'
+import { VoiceChannelListener } from './listeners/voice-channel-listener'
 import * as dotenv from 'dotenv'
 dotenv.config()
 
@@ -27,6 +28,7 @@ class App {
 // initialize our application with whatever listeners we want to use
 const app = new App(discordClient, [
     new ReadyListener(), 
-    new MessageListener()
+    new MessageListener(),
+    new VoiceChannelListener()
 ])
 app.start(new AppState())
