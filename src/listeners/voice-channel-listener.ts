@@ -57,8 +57,8 @@ export class VoiceChannelListener implements Listener {
                     }
                 }
 
+                // user changes voice channels, but stays connected to voice as a whole
                 if (oldState.channelId && newState.channelId !== oldState.channelId) {
-                    // user moved voice channels -- figure out if i want to utilize this
                     // this could lead to some interesting data, but I want to get basic functionality
                     // working first
                 }
