@@ -11,8 +11,8 @@ export class VoiceChannelListener implements Listener {
     private voiceSession: Map<string, UserVoiceSessionData> = new Map()
 
     public attachClient(client: Client, appState: AppState): void {
-        if (appState.shouldListen) {
-            client.on('voiceStateUpdate', async (oldState, newState) => {
+        client.on('voiceStateUpdate', async (oldState, newState) => {
+            if (appState.shouldListen) {
                 // user joined voice chat
                 if (!oldState.channelId) {
                     this.userCount++
@@ -62,7 +62,7 @@ export class VoiceChannelListener implements Listener {
                     // this could lead to some interesting data, but I want to get basic functionality
                     // working first
                 }
-            })
-        }
+            }
+        })
     }
 }
