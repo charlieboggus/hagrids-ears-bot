@@ -9,7 +9,7 @@ export class ReadyListener implements Listener {
             if (!client.user || !client.application) {
                 return
             }
-            Logger.log(`${client.user.username} is online`)
+            Logger.log(`${client.user.username} is online`, true)
         })
     }
 }
