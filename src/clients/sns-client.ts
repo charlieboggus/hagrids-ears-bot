@@ -11,12 +11,9 @@ export class SNSClient {
         }
         const client = new AWS.SNS({ region: process.env.AWS_REGION ?? 'us-east-1' })
         try {
-            await client.publish(params, (err, data) => {
+            await client.publish(params, (err) => {
                 if (err) {
                     Logger.error(`Failed to call SNS ${err}`)
-                }
-                else {
-                    Logger.log(`Successfully called SNS topic ${data}`)
                 }
             })
         }

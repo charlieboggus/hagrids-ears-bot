@@ -1,5 +1,6 @@
 
-export class MessageData {
-    public message: string = ''
-    public author: string = ''
+export interface MessageData {
+    message: string
+    author: string
+    authorId?: string
 }

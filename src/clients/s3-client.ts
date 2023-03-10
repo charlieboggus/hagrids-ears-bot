@@ -12,17 +12,14 @@ export class S3Client {
             Body: payload
         }
         const client = new AWS.S3({ region: process.env.AWS_REGION ?? 'us-east-1' })
-        client.putObject(params, (err, data) => {
+        client.putObject(params, (err) => {
             if (err) {
                 Logger.error(`Failed to store data in S3 bucket: ${JSON.stringify(err)}`)
-            }
-            else {
-                Logger.log(`Successfully stored data in S3 bucket: ${JSON.stringify(data)}`)
             }
         })
     }
 
     private generateKey(): string {
-        return `hagrid-hole-data-${Date.now()}`
+        return `hagrid-hole-data-v3-${Date.now()}`
     }
 }
