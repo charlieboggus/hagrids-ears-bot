@@ -92,9 +92,7 @@ export class MessageListener implements Listener {
     }
 
     private hasUrl(message: string): boolean {
-        const pattern = new RegExp(
-            "([a-zA-Z0-9]+://)?([a-zA-Z0-9_]+:[a-zA-Z0-9_]+@)?([a-zA-Z0-9.-]+\\.[A-Za-z]{2,4})(:[0-9]+)?(/.*)?"
-            )
+        const pattern = new RegExp(".*\bhttps?:\/\/\S+.*")
         return pattern.test(message)
     }
 
