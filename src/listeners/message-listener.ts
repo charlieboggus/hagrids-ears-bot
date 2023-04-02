@@ -17,7 +17,7 @@ export class MessageListener implements Listener {
     private readonly messageBatchOverflowSize: number = 500
 
     public attachClient(client: Client, appState: AppState): void {
-        this.validUsers = this.loadValidUsersMap('../users.json')
+        this.validUsers = this.loadValidUsersMap('./users.json')
         client.on('messageCreate', async (receivedMessage) => {
             if (this.isMessageCommand(receivedMessage)) {
                 const commandStr: string = receivedMessage.content
@@ -30,8 +30,14 @@ export class MessageListener implements Listener {
     }
 
     private loadValidUsersMap (file: string): Map<string, string> {
-        const validUsersJson = JSON.parse(fs.readFileSync(file, 'utf-8'))
-        return new Map(Object.entries(validUsersJson))
+        try {
+            const validUsersJson = JSON.parse(fs.readFileSync(file, 'utf-8'))
+            return new Map(Object.entries(validUsersJson))
+        }
+        catch (err) {
+            Logger.error(`${err}`)
+            return new Map()
+        }
     }
 
     private isMessageCommand(message: Message<boolean>): boolean {
