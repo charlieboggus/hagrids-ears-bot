@@ -4,8 +4,11 @@ import { S3Client } from '../clients/s3-client'
 import { Logger } from '../util/logger'
 import { Listener } from './listener'
 import { MessageData } from '../api/message-data'
+import fs from 'fs'
 
 export class MessageListener implements Listener {
+
+    private validUsers: Map<string, string> = new Map()
 
     private messageBatch: MessageData[] = []
 
@@ -14,6 +17,7 @@ export class MessageListener implements Listener {
     private readonly messageBatchOverflowSize: number = 500
 
     public attachClient(client: Client, appState: AppState): void {
+        this.validUsers = this.loadValidUsersMap('./users.json')
         client.on('messageCreate', async (receivedMessage) => {
             if (this.isMessageCommand(receivedMessage)) {
                 const commandStr: string = receivedMessage.content
@@ -23,6 +27,17 @@ export class MessageListener implements Listener {
                 this.processMessage(receivedMessage, appState)
             }
         })
+    }
+
+    private loadValidUsersMap (file: string): Map<string, string> {
+        try {
+            const validUsersJson = JSON.parse(fs.readFileSync(file, 'utf-8'))
+            return new Map(Object.entries(validUsersJson))
+        }
+        catch (err) {
+            Logger.error(`${err}`)
+            return new Map()
+        }
     }
 
     private isMessageCommand(message: Message<boolean>): boolean {
@@ -67,6 +82,11 @@ export class MessageListener implements Listener {
                 this.messageBatch = []
                 return
             }
+            
+            if (!this.isValidUser(message.author.id)) {
+                return
+            }
+
             if (this.messageBatch.length > this.messageBatchSize) {
                 this.sendMessageBatchToS3()
                 this.messageBatch = []
@@ -87,14 +107,16 @@ export class MessageListener implements Listener {
         }
     }
 
+    private isValidUser (userId: string): boolean {
+        return this.validUsers.has(userId)
+    }
+
     private shouldBatchMessage (message: Message<boolean>): boolean {
         return message.attachments.size === 0 && !this.hasUrl(message.content)
     }
 
     private hasUrl(message: string): boolean {
-        const pattern = new RegExp(
-            "([a-zA-Z0-9]+://)?([a-zA-Z0-9_]+:[a-zA-Z0-9_]+@)?([a-zA-Z0-9.-]+\\.[A-Za-z]{2,4})(:[0-9]+)?(/.*)?"
-            )
+        const pattern = new RegExp(".*\bhttps?:\/\/\S+.*")
         return pattern.test(message)
     }
 
