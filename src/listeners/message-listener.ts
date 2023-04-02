@@ -4,8 +4,11 @@ import { S3Client } from '../clients/s3-client'
 import { Logger } from '../util/logger'
 import { Listener } from './listener'
 import { MessageData } from '../api/message-data'
+import fs from 'fs'
 
 export class MessageListener implements Listener {
+
+    private validUsers: Map<string, string> = new Map()
 
     private messageBatch: MessageData[] = []
 
@@ -14,6 +17,7 @@ export class MessageListener implements Listener {
     private readonly messageBatchOverflowSize: number = 500
 
     public attachClient(client: Client, appState: AppState): void {
+        this.validUsers = this.loadValidUsersMap('../users.json')
         client.on('messageCreate', async (receivedMessage) => {
             if (this.isMessageCommand(receivedMessage)) {
                 const commandStr: string = receivedMessage.content
@@ -23,6 +27,11 @@ export class MessageListener implements Listener {
                 this.processMessage(receivedMessage, appState)
             }
         })
+    }
+
+    private loadValidUsersMap (file: string): Map<string, string> {
+        const validUsersJson = JSON.parse(fs.readFileSync(file, 'utf-8'))
+        return new Map(Object.entries(validUsersJson))
     }
 
     private isMessageCommand(message: Message<boolean>): boolean {
@@ -67,6 +76,11 @@ export class MessageListener implements Listener {
                 this.messageBatch = []
                 return
             }
+            
+            if (!this.isValidUser(message.author.id)) {
+                return
+            }
+
             if (this.messageBatch.length > this.messageBatchSize) {
                 this.sendMessageBatchToS3()
                 this.messageBatch = []
@@ -85,6 +99,10 @@ export class MessageListener implements Listener {
         else {
             Logger.log('Hagrid is not listening...', true)
         }
+    }
+
+    private isValidUser (userId: string): boolean {
+        return this.validUsers.has(userId)
     }
 
     private shouldBatchMessage (message: Message<boolean>): boolean {
