@@ -24,14 +24,14 @@ export class VoiceChannelListener implements Listener {
         // user joins voice chat
         if (!oldState.channelId) {
             if (newState.member) {
-                this.userJoinVoice(newState.member)
+                this.userJoinVoice(newState)
             }
         }
 
         // user leaves voice chat
         if (!newState.channelId) {
             if (oldState.member) {
-                this.userLeaveVoice(oldState.member)
+                this.userLeaveVoice(oldState)
             }
         }
 
@@ -41,8 +41,12 @@ export class VoiceChannelListener implements Listener {
         }
     }
 
-    private userJoinVoice(user: GuildMember): void {
+    private userJoinVoice(voiceState: VoiceState): void {
+        if (!voiceState.member) {
+            return
+        }
         this.userCount++
+        const user: GuildMember = voiceState.member
         const displayName: string = user.displayName
         if (!this.voiceSession.has(displayName)) {
             const userSessionData: UserVoiceSessionData = {
@@ -55,15 +59,18 @@ export class VoiceChannelListener implements Listener {
         }
     }
 
-    private userLeaveVoice(user: GuildMember): void {
+    private userLeaveVoice(voiceState: VoiceState): void {
+        if (!voiceState.member) {
+            return
+        }
         this.userCount--
+        const user: GuildMember = voiceState.member
         const displayName: string = user.displayName
         const userSessionData: UserVoiceSessionData | undefined = this.voiceSession.get(displayName)
         if (userSessionData) {
             userSessionData.leaveTimestamp = Date.now()
             this.voiceSession.set(displayName, userSessionData)
         }
-
         if (this.userCount === 0) {
             this.sendVoiceSessionDataToS3()
         }
