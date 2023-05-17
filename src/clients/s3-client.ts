@@ -8,7 +8,7 @@ export class S3Client {
     public async putObject(payload: string): Promise<void> {
         const params = {
             Bucket: this.bucketName,
-            Key: this.generateKey(),
+            Key: `hagrid-hole-data-v3-${Date.now()}`,
             Body: payload
         }
         const client = new AWS.S3({ region: process.env.AWS_REGION ?? 'us-east-1' })
@@ -17,9 +17,5 @@ export class S3Client {
                 Logger.error(`Failed to store data in S3 bucket: ${JSON.stringify(err)}`)
             }
         })
-    }
-
-    private generateKey(): string {
-        return `hagrid-hole-data-v3-${Date.now()}`
     }
 }

@@ -7,11 +7,14 @@ import { Listener } from './listener'
 
 export class VoiceChannelListener implements Listener {
 
+    private devMode: boolean = false
+
     private userCount: number = 0
 
     private voiceSession: Map<string, UserVoiceSessionData> = new Map()
 
-    public attachClient(client: Client, _appState: AppState): void {
+    public attachClient(client: Client, appState: AppState): void {
+        this.devMode = appState.devMode
         client.on('voiceStateUpdate', async (oldState, newState) => {
             this.handleVoiceStateChange(oldState, newState)
         })
@@ -67,14 +70,16 @@ export class VoiceChannelListener implements Listener {
     }
 
     private sendVoiceSessionDataToS3(): void {
-        const voiceSessionBatch: UserVoiceSessionData[] = []
-        for (const userData of this.voiceSession.values()) {
-            voiceSessionBatch.push(userData)
+        if (!this.devMode) {
+            const voiceSessionBatch: UserVoiceSessionData[] = []
+            for (const userData of this.voiceSession.values()) {
+                voiceSessionBatch.push(userData)
+            }
+            const payload: string = JSON.stringify(voiceSessionBatch)
+            const s3Client: S3Client = new S3Client(process.env.VOICE_DATA_BUCKET ?? '')
+            s3Client.putObject(payload)
+            Logger.log(`Sent batch to Lambda function: ${payload}`, true)
         }
-        const payload: string = JSON.stringify(voiceSessionBatch)
-        const s3Client: S3Client = new S3Client(process.env.VOICE_DATA_BUCKET ?? '')
-        s3Client.putObject(payload)
-        Logger.log(`Sent batch to Lambda function: ${payload}`, true)
         this.voiceSession = new Map()
     }
 }

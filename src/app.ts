@@ -8,7 +8,13 @@ import * as dotenv from 'dotenv'
 dotenv.config()
 
 export class AppState {
-    public shouldListen: boolean = false
+    public readonly devMode: boolean
+    public shouldListen: boolean
+
+    constructor() {
+        this.devMode = process.env.DEVELOPMENT_MODE === 'true'
+        this.shouldListen = false
+    }
 }
 
 class App {
@@ -21,11 +27,12 @@ class App {
         this.listeners.forEach(listener => {
             listener.attachClient(this.client, state)
         })
-        this.client.login(process.env.DISCORD_TOKEN)
+        this.client.login(
+            state.devMode ? process.env.DISCORD_TOKEN_TEST : process.env.DISCORD_TOKEN
+        )
     }
 }
 
-// initialize our application with whatever listeners we want to use
 const app = new App(discordClient, [
     new ReadyListener(), 
     new MessageListener(),
