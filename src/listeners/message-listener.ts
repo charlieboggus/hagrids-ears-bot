@@ -8,6 +8,8 @@ import fs from 'fs'
 
 export class MessageListener implements Listener {
 
+    private devMode: boolean = false
+
     private validUsers: Map<string, string> = new Map()
 
     private messageBatch: MessageData[] = []
@@ -17,6 +19,7 @@ export class MessageListener implements Listener {
     private readonly messageBatchOverflowSize: number = 500
 
     public attachClient(client: Client, appState: AppState): void {
+        this.devMode = appState.devMode
         this.validUsers = this.loadValidUsersMap('./users.json')
         client.on('messageCreate', async (receivedMessage) => {
             if (this.isMessageCommand(receivedMessage)) {
@@ -57,16 +60,17 @@ export class MessageListener implements Listener {
     }
 
     private processCommand (commandStr: string, appState: AppState): void {
+        const notify: boolean = this.devMode ? false : true
         const command: string = commandStr.slice(1)
         switch (command) {
             case 'start': {
                 appState.shouldListen = true
-                Logger.log('Hagrid has started listening', true)
+                Logger.log('Hagrid has started listening', notify)
                 break
             }
             case 'stop': {
                 appState.shouldListen = false
-                Logger.log('Hagrid has stopped listening', true)
+                Logger.log('Hagrid has stopped listening', notify)
                 break
             }
             default: {
@@ -76,34 +80,45 @@ export class MessageListener implements Listener {
     }
 
     private processMessage (message: Message<boolean>, appState: AppState) {
-        if (appState.shouldListen) {
-            if (this.messageBatch.length > this.messageBatchOverflowSize) {
-                Logger.error('message batch overflow error!')
-                this.messageBatch = []
-                return
-            }
-            
-            if (!this.isValidUser(message.author.id)) {
-                return
-            }
+        const notify: boolean = this.devMode ? false : true
 
-            if (this.messageBatch.length > this.messageBatchSize) {
-                this.sendMessageBatchToS3()
-                this.messageBatch = []
+        // Don't process a message if the bot isn't listening
+        if (!appState.shouldListen) {
+            Logger.log('Hagrid is not listening...', notify)
+            return
+        }
+
+        // Don't process messages from invalid users
+        if (!this.isValidUser(message.author.id)) {
+            return
+        }
+
+        // Check for a message batch overflow -- this should never happen but better safe than sorry
+        if (this.messageBatch.length > this.messageBatchOverflowSize) {
+            Logger.error('Message batch overflow', notify)
+            this.messageBatch = []
+            return
+        }
+
+        // if our batch is full, ship it off to S3 otherwise batch up the message
+        if (this.messageBatch.length > this.messageBatchSize) {
+            if (this.devMode) {
+                Logger.log('Application in Development mode... Skipping publishing messages to S3', notify)
             }
             else {
-                if (this.shouldBatchMessage(message)) {
-                    const messageData: MessageData = {
-                        message: message.content,
-                        author: message.author.username,
-                        authorId: message.author.id
-                    }
-                    this.messageBatch.push(messageData)
-                }
+                this.sendMessageBatchToS3()
             }
+            this.messageBatch = []
         }
         else {
-            Logger.log('Hagrid is not listening...', true)
+            if (this.shouldBatchMessage(message)) {
+                const messageData: MessageData = {
+                    message: message.content,
+                    author: message.author.username,
+                    authorId: message.author.id
+                }
+                this.messageBatch.push(messageData)
+            }
         }
     }
 

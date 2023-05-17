@@ -1,6 +1,5 @@
 import { Client, GatewayIntentBits, Partials } from 'discord.js'
 
-// TODO: figure out which of these intents and partials I actually need and which I don't
 export const discordClient = new Client({
     intents: [
         GatewayIntentBits.Guilds,

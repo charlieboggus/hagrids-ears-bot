@@ -4,12 +4,13 @@ import { Logger } from '../util/logger'
 import { Listener } from './listener'
 
 export class ReadyListener implements Listener {
-    public attachClient(client: Client, _appState: AppState): void {
+    public attachClient(client: Client, appState: AppState): void {
         client.on('ready', () => {
             if (!client.user || !client.application) {
                 return
             }
-            Logger.log(`${client.user.username} is online`, true)
+            const notify: boolean = appState.devMode ? false : true
+            Logger.log(`${client.user.username} is online`, notify)
         })
     }
 }
