@@ -4,6 +4,10 @@ import { AppState } from '../app'
 import { S3Client } from '../clients/s3-client'
 import { Logger } from '../util/logger'
 import { Listener } from './listener'
+import { createVoiceConnection } from '../util/voice-connection'
+import { getVoiceConnection } from '@discordjs/voice'
+import { loadJsonMap } from '../util/load-json'
+import { createListeningStream } from '../util/listening-stream'
 
 export class VoiceChannelListener implements Listener {
 
@@ -13,8 +17,11 @@ export class VoiceChannelListener implements Listener {
 
     private voiceSession: Map<string, UserVoiceSessionData> = new Map()
 
+    private recordableUsers: Map<string, string> = new Map()
+
     public attachClient(client: Client, appState: AppState): void {
         this.devMode = appState.devMode
+        this.recordableUsers = loadJsonMap('./users.json')
         client.on('voiceStateUpdate', async (oldState, newState) => {
             this.handleVoiceStateChange(oldState, newState)
         })
@@ -45,34 +52,59 @@ export class VoiceChannelListener implements Listener {
         if (!voiceState.member) {
             return
         }
-        this.userCount++
         const user: GuildMember = voiceState.member
+        const userId: string = user.id
         const displayName: string = user.displayName
         if (!this.voiceSession.has(displayName)) {
-            const userSessionData: UserVoiceSessionData = {
-                joinedTimestamp: Date.now(),
-                leaveTimestamp: -1,
-                userId: user.id,
-                userDisplayName: displayName
-            }
-            this.voiceSession.set(displayName, userSessionData)
+            this.userCount++
+            this.addUserToVoiceSession(userId, displayName)
         }
+        const channel = voiceState.channel
+        if (channel) {
+            const connection = createVoiceConnection(channel)
+            const receiver = connection.receiver
+            receiver.speaking.on('start', (userId) => {
+                if (this.recordableUsers.has(userId)) {
+                    // this shit crashes out whenever someone speaks... need to figure out why
+                    //createListeningStream(receiver, userId, displayName)
+                }
+            })
+        }
+    }
+
+    private addUserToVoiceSession(userId: string, displayName: string): void {
+        const userSessionData: UserVoiceSessionData = {
+            joinedTimestamp: Date.now(),
+            leaveTimestamp: -1,
+            userId: userId,
+            userDisplayName: displayName
+        }
+        this.voiceSession.set(displayName, userSessionData)
     }
 
     private userLeaveVoice(voiceState: VoiceState): void {
         if (!voiceState.member) {
             return
         }
-        this.userCount--
         const user: GuildMember = voiceState.member
         const displayName: string = user.displayName
-        const userSessionData: UserVoiceSessionData | undefined = this.voiceSession.get(displayName)
-        if (userSessionData) {
-            userSessionData.leaveTimestamp = Date.now()
-            this.voiceSession.set(displayName, userSessionData)
-        }
+        this.removeUserFromVoiceSession(displayName)
         if (this.userCount === 0) {
             this.sendVoiceSessionDataToS3()
+            const channel = voiceState.channel
+            if (channel) {
+                const connection = getVoiceConnection(channel.guild.id)
+                connection?.destroy()
+            }
+        }
+    }
+
+    private removeUserFromVoiceSession(displayName: string): void {
+        const userSessionData: UserVoiceSessionData | undefined = this.voiceSession.get(displayName)
+        if (userSessionData) {
+            this.userCount--
+            userSessionData.leaveTimestamp = Date.now()
+            this.voiceSession.set(displayName, userSessionData)
         }
     }
 

@@ -4,7 +4,7 @@ import { S3Client } from '../clients/s3-client'
 import { Logger } from '../util/logger'
 import { Listener } from './listener'
 import { MessageData } from '../api/message-data'
-import fs from 'fs'
+import { loadJsonMap } from '../util/load-json'
 
 export class MessageListener implements Listener {
 
@@ -20,7 +20,7 @@ export class MessageListener implements Listener {
 
     public attachClient(client: Client, appState: AppState): void {
         this.devMode = appState.devMode
-        this.validUsers = this.loadValidUsersMap('./users.json')
+        this.validUsers = loadJsonMap('./users.json')
         client.on('messageCreate', async (receivedMessage) => {
             if (this.isMessageCommand(receivedMessage)) {
                 const commandStr: string = receivedMessage.content
@@ -30,17 +30,6 @@ export class MessageListener implements Listener {
                 this.processMessage(receivedMessage, appState)
             }
         })
-    }
-
-    private loadValidUsersMap (file: string): Map<string, string> {
-        try {
-            const validUsersJson = JSON.parse(fs.readFileSync(file, 'utf-8'))
-            return new Map(Object.entries(validUsersJson))
-        }
-        catch (err) {
-            Logger.error(`${err}`)
-            return new Map()
-        }
     }
 
     private isMessageCommand(message: Message<boolean>): boolean {

@@ -28,6 +28,7 @@
     "aws-sdk": "2.1379.0",
     "discord.js": "14.6.0",
     "dotenv": "16.0.3",
+    "node-crc": "3.0.1",
     "prism-media": "2.0.0-alpha.0"
   }
 }
