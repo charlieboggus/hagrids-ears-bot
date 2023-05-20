@@ -10,10 +10,12 @@ dotenv.config()
 export class AppState {
     public readonly devMode: boolean
     public shouldListen: boolean
+    public shouldRecord: boolean
 
     constructor() {
         this.devMode = process.env.DEVELOPMENT_MODE === 'true'
         this.shouldListen = false
+        this.shouldRecord = false
     }
 }
 
