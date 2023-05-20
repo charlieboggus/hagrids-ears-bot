@@ -1,9 +1,14 @@
-import { Client, GuildMember, VoiceState } from 'discord.js'
+import { Client, GuildMember, VoiceBasedChannel, VoiceState } from 'discord.js'
 import { UserVoiceSessionData } from '../api/user-voice-session-data'
 import { AppState } from '../app'
 import { S3Client } from '../clients/s3-client'
 import { Logger } from '../util/logger'
 import { Listener } from './listener'
+import { getVoiceConnection, joinVoiceChannel } from '@discordjs/voice'
+import { loadJsonMap } from '../util/load-json'
+import { EndBehaviorType } from '@discordjs/voice'
+import * as fs from 'fs'
+import * as prism from 'prism-media'
 
 export class VoiceChannelListener implements Listener {
 
@@ -13,8 +18,11 @@ export class VoiceChannelListener implements Listener {
 
     private voiceSession: Map<string, UserVoiceSessionData> = new Map()
 
+    private recordableUsers: Map<string, string> = new Map()
+
     public attachClient(client: Client, appState: AppState): void {
         this.devMode = appState.devMode
+        this.recordableUsers = loadJsonMap('./users.json')
         client.on('voiceStateUpdate', async (oldState, newState) => {
             this.handleVoiceStateChange(oldState, newState)
         })
@@ -27,14 +35,12 @@ export class VoiceChannelListener implements Listener {
                 this.userJoinVoice(newState)
             }
         }
-
         // user leaves voice chat
         if (!newState.channelId) {
             if (oldState.member) {
                 this.userLeaveVoice(oldState)
             }
         }
-
         // user changes voice chat channels, but stays connected to voice as a whole
         if (oldState.channelId && newState.channelId !== oldState.channelId) {
             // TODO: figure out if I want to utilize this functionality
@@ -45,17 +51,73 @@ export class VoiceChannelListener implements Listener {
         if (!voiceState.member) {
             return
         }
-        this.userCount++
         const user: GuildMember = voiceState.member
+        const userId: string = user.id
         const displayName: string = user.displayName
         if (!this.voiceSession.has(displayName)) {
-            const userSessionData: UserVoiceSessionData = {
-                joinedTimestamp: Date.now(),
-                leaveTimestamp: -1,
-                userId: user.id,
-                userDisplayName: displayName
+            this.userCount++
+            this.addUserToVoiceSession(userId, displayName)
+        }
+        if (this.userCount === 1) { // TODO: i can add a check for if recording mode is enabled (appSettings property) or disabled here possibly
+            const channel = voiceState.channel
+            if (channel) {
+                this.createBotVoiceConnection(channel)
             }
-            this.voiceSession.set(displayName, userSessionData)
+        }
+    }
+
+    private addUserToVoiceSession(userId: string, displayName: string): void {
+        const userSessionData: UserVoiceSessionData = {
+            joinedTimestamp: Date.now(),
+            leaveTimestamp: -1,
+            userId: userId,
+            userDisplayName: displayName
+        }
+        this.voiceSession.set(displayName, userSessionData)
+    }
+
+    private createBotVoiceConnection(channel: VoiceBasedChannel) {
+        const connection = joinVoiceChannel({
+            channelId: channel.id,
+            guildId: channel.guild.id,
+            adapterCreator: channel.guild.voiceAdapterCreator,
+            selfDeaf: false,
+            selfMute: true
+        })
+        const receiver = connection.receiver
+        receiver.speaking.on('start', userId => {
+            if (this.recordableUsers.has(userId)) {
+                const fileName: string = `./recording-${userId}-${Date.now()}.pcm`
+                const audioStream = receiver.subscribe(userId, {
+                    end: {
+                        behavior: EndBehaviorType.AfterSilence,
+                        duration: 1000
+                    }
+                })
+                const decoder = new prism.opus.Decoder({ frameSize: 960, channels: 2, rate: 48000 })
+                const stream = audioStream.pipe(decoder).pipe(fs.createWriteStream(fileName))
+                stream.on('finish', () => {
+                    const s3ObjectName: string = `${userId}/${fileName.substring(2)}`
+                    const fileData = fs.readFileSync(fileName)
+                    this.uploadVoiceRecordingToS3(s3ObjectName, fileData)
+                    fs.unlink(fileName, err => {
+                        if (err) {
+                            Logger.error(`Failed to delete voice recording: ${err}`, !this.devMode)
+                        }
+                    })
+                })
+            }
+        })
+    }
+
+    private uploadVoiceRecordingToS3(objectName: string, data: Buffer): void {
+        try {
+            const s3Client: S3Client = new S3Client(process.env.VOICE_RECORDING_BUCKET ?? '')
+            s3Client.putFile(data, objectName)
+            Logger.log(`Successfully uploaded voice recording to S3: ${objectName}`, false)
+        }
+        catch (err) {
+            Logger.error(`Error thrown when attempting to upload voice recording to S3: ${err}`, !this.devMode)
         }
     }
 
@@ -63,16 +125,33 @@ export class VoiceChannelListener implements Listener {
         if (!voiceState.member) {
             return
         }
-        this.userCount--
         const user: GuildMember = voiceState.member
         const displayName: string = user.displayName
-        const userSessionData: UserVoiceSessionData | undefined = this.voiceSession.get(displayName)
-        if (userSessionData) {
-            userSessionData.leaveTimestamp = Date.now()
-            this.voiceSession.set(displayName, userSessionData)
+        this.removeUserFromVoiceSession(displayName)
+        if (this.userCount === 1) {
+            const channel = voiceState.channel
+            if (channel) {
+                this.disconnectBotFromVoice(channel)
+            }
         }
         if (this.userCount === 0) {
             this.sendVoiceSessionDataToS3()
+        }
+    }
+
+    private removeUserFromVoiceSession(displayName: string): void {
+        const userSessionData: UserVoiceSessionData | undefined = this.voiceSession.get(displayName)
+        if (userSessionData) {
+            this.userCount--
+            userSessionData.leaveTimestamp = Date.now()
+            this.voiceSession.set(displayName, userSessionData)
+        }
+    }
+
+    private disconnectBotFromVoice(channel: VoiceBasedChannel): void {
+        const connection = getVoiceConnection(channel.guild.id)
+        if (connection) {
+            connection.destroy()
         }
     }
 
@@ -84,7 +163,7 @@ export class VoiceChannelListener implements Listener {
             }
             const payload: string = JSON.stringify(voiceSessionBatch)
             const s3Client: S3Client = new S3Client(process.env.VOICE_DATA_BUCKET ?? '')
-            s3Client.putObject(payload)
+            s3Client.putTextObject(payload)
             Logger.log(`Sent batch to Lambda function: ${payload}`, true)
         }
         this.voiceSession = new Map()

@@ -4,7 +4,7 @@ import { S3Client } from '../clients/s3-client'
 import { Logger } from '../util/logger'
 import { Listener } from './listener'
 import { MessageData } from '../api/message-data'
-import fs from 'fs'
+import { loadJsonMap } from '../util/load-json'
 
 export class MessageListener implements Listener {
 
@@ -20,7 +20,7 @@ export class MessageListener implements Listener {
 
     public attachClient(client: Client, appState: AppState): void {
         this.devMode = appState.devMode
-        this.validUsers = this.loadValidUsersMap('./users.json')
+        this.validUsers = loadJsonMap('./users.json')
         client.on('messageCreate', async (receivedMessage) => {
             if (this.isMessageCommand(receivedMessage)) {
                 const commandStr: string = receivedMessage.content
@@ -30,17 +30,6 @@ export class MessageListener implements Listener {
                 this.processMessage(receivedMessage, appState)
             }
         })
-    }
-
-    private loadValidUsersMap (file: string): Map<string, string> {
-        try {
-            const validUsersJson = JSON.parse(fs.readFileSync(file, 'utf-8'))
-            return new Map(Object.entries(validUsersJson))
-        }
-        catch (err) {
-            Logger.error(`${err}`)
-            return new Map()
-        }
     }
 
     private isMessageCommand(message: Message<boolean>): boolean {
@@ -81,25 +70,21 @@ export class MessageListener implements Listener {
 
     private processMessage (message: Message<boolean>, appState: AppState) {
         const notify: boolean = this.devMode ? false : true
-
         // Don't process a message if the bot isn't listening
         if (!appState.shouldListen) {
             Logger.log('Hagrid is not listening...', notify)
             return
         }
-
         // Don't process messages from invalid users
         if (!this.isValidUser(message.author.id)) {
             return
         }
-
         // Check for a message batch overflow -- this should never happen but better safe than sorry
         if (this.messageBatch.length > this.messageBatchOverflowSize) {
             Logger.error('Message batch overflow', notify)
             this.messageBatch = []
             return
         }
-
         // if our batch is full, ship it off to S3 otherwise batch up the message
         if (this.messageBatch.length > this.messageBatchSize) {
             if (this.devMode) {
@@ -138,7 +123,7 @@ export class MessageListener implements Listener {
     private sendMessageBatchToS3 (): void {
         const s3Client: S3Client = new S3Client(process.env.MESSAGE_DATA_BUCKET ?? '')
         const batchStr: string = JSON.stringify(this.messageBatch)
-        s3Client.putObject(batchStr)
+        s3Client.putTextObject(batchStr)
         const notificationMessage: string = `Sent message batch to S3:\n\n${batchStr}`
         Logger.log(notificationMessage, true)
     }
