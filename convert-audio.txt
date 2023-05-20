@@ -1,0 +1,1 @@
+exec(`ffmpeg -y -f s16le -ar 44.1k -ac 2 -i ./recordings/${fileName}.pcm ./recordings/${fileName}.mp3`)
