@@ -4,9 +4,13 @@ Discord bot that listens
 ## Usage:
 - Just invite the bot to your server and let it exist and it will collect data
 
-- To start data collection send the following command (admin user): ```$start```
+- To start message recording send the following command (admin user): ```$start```
 
-- To pause data collection send the following command (admin user): ```$stop```
+- To pause message recording send the following command (admin user): ```$stop```
+
+- To start voice channel recording send the following command (admin user): ```$startRecord```
+
+- To stop voice channel recording send the following command (admin user): ```$stopRecord```
 
 ## Requirements:
 
