@@ -35,9 +35,13 @@ export class MessageListener implements Listener {
     private isMessageCommand(message: Message<boolean>): boolean {
         if (message.author.id === process.env.ADMIN_USER_ID) {
             switch (message.content) {
-                case "$start":
+                case '$start':
                     return true
-                case "$stop":
+                case '$stop':
+                    return true
+                case '$startRecord':
+                    return true
+                case '$stopRecord':
                     return true
                 default:
                     return false
@@ -60,6 +64,16 @@ export class MessageListener implements Listener {
             case 'stop': {
                 appState.shouldListen = false
                 Logger.log('Hagrid has stopped listening', notify)
+                break
+            }
+            case 'startRecord': {
+                appState.shouldRecord = true
+                Logger.log('Hagrid voice recording enabled', notify)
+                break
+            }
+            case 'stopRecord': {
+                appState.shouldRecord = false
+                Logger.log('Hagrid voice recording disabled', notify)
                 break
             }
             default: {

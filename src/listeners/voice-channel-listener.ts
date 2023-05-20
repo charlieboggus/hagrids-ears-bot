@@ -24,7 +24,7 @@ export class VoiceChannelListener implements Listener {
         this.devMode = appState.devMode
         this.recordableUsers = loadJsonMap('./users.json')
         client.on('voiceStateUpdate', async (oldState, newState) => {
-            if (appState.shouldListen) {
+            if (appState.shouldRecord) {
                 this.handleVoiceStateChange(oldState, newState)
             }
         })
