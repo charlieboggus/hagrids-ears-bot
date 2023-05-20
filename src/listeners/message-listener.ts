@@ -70,25 +70,21 @@ export class MessageListener implements Listener {
 
     private processMessage (message: Message<boolean>, appState: AppState) {
         const notify: boolean = this.devMode ? false : true
-
         // Don't process a message if the bot isn't listening
         if (!appState.shouldListen) {
             Logger.log('Hagrid is not listening...', notify)
             return
         }
-
         // Don't process messages from invalid users
         if (!this.isValidUser(message.author.id)) {
             return
         }
-
         // Check for a message batch overflow -- this should never happen but better safe than sorry
         if (this.messageBatch.length > this.messageBatchOverflowSize) {
             Logger.error('Message batch overflow', notify)
             this.messageBatch = []
             return
         }
-
         // if our batch is full, ship it off to S3 otherwise batch up the message
         if (this.messageBatch.length > this.messageBatchSize) {
             if (this.devMode) {
