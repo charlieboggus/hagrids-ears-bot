@@ -97,7 +97,9 @@ export class VoiceChannelListener implements Listener {
                 const decoder = new prism.opus.Decoder({ frameSize: 960, channels: 2, rate: 48000 })
                 const stream = audioStream.pipe(decoder).pipe(fs.createWriteStream(fileName))
                 stream.on('finish', () => {
-                    this.uploadVoiceRecordingToS3(fileName)
+                    const s3ObjectName: string = `${userId}/${fileName.substring(2)}`
+                    const fileData = fs.readFileSync(fileName)
+                    this.uploadVoiceRecordingToS3(s3ObjectName, fileData)
                     fs.unlink(fileName, err => {
                         if (err) {
                             Logger.error(`Failed to delete voice recording: ${err}`, !this.devMode)
@@ -108,12 +110,11 @@ export class VoiceChannelListener implements Listener {
         })
     }
 
-    private uploadVoiceRecordingToS3(fileName: string): void {
+    private uploadVoiceRecordingToS3(objectName: string, data: Buffer): void {
         try {
-            const fileData = fs.readFileSync(fileName)
             const s3Client: S3Client = new S3Client(process.env.VOICE_RECORDING_BUCKET ?? '')
-            s3Client.putFile(fileData, fileName.substring(2))
-            Logger.log(`Successfully uploaded voice recording to S3: ${fileName}`, false)
+            s3Client.putFile(data, objectName)
+            Logger.log(`Successfully uploaded voice recording to S3: ${objectName}`, false)
         }
         catch (err) {
             Logger.error(`Error thrown when attempting to upload voice recording to S3: ${err}`, !this.devMode)
