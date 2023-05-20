@@ -127,7 +127,7 @@ export class MessageListener implements Listener {
     private sendMessageBatchToS3 (): void {
         const s3Client: S3Client = new S3Client(process.env.MESSAGE_DATA_BUCKET ?? '')
         const batchStr: string = JSON.stringify(this.messageBatch)
-        s3Client.putObject(batchStr)
+        s3Client.putTextObject(batchStr)
         const notificationMessage: string = `Sent message batch to S3:\n\n${batchStr}`
         Logger.log(notificationMessage, true)
     }

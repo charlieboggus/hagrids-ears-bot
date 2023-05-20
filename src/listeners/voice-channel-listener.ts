@@ -109,7 +109,15 @@ export class VoiceChannelListener implements Listener {
     }
 
     private uploadVoiceRecordingToS3(fileName: string): void {
-
+        try {
+            const fileData = fs.readFileSync(fileName)
+            const s3Client: S3Client = new S3Client(process.env.VOICE_DATA_BUCKET ?? '')
+            s3Client.putFile(fileData, fileName.substring(2))
+            Logger.log(`Successfully uploaded voice recording to S3: ${fileName}`, false)
+        }
+        catch (err) {
+            Logger.error(`Error thrown when attempting to upload voice recording to S3: ${err}`, !this.devMode)
+        }
     }
 
     private userLeaveVoice(voiceState: VoiceState): void {
@@ -154,7 +162,7 @@ export class VoiceChannelListener implements Listener {
             }
             const payload: string = JSON.stringify(voiceSessionBatch)
             const s3Client: S3Client = new S3Client(process.env.VOICE_DATA_BUCKET ?? '')
-            s3Client.putObject(payload)
+            s3Client.putTextObject(payload)
             Logger.log(`Sent batch to Lambda function: ${payload}`, true)
         }
         this.voiceSession = new Map()

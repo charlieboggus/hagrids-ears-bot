@@ -3,7 +3,7 @@ import { PublishInput } from 'aws-sdk/clients/sns'
 import { Logger } from '../util/logger'
 
 export class SNSClient {
-    public async publish(message: string, subject?: string): Promise<void> {
+    public publishNotification(message: string, subject?: string): void {
         const params: PublishInput = {
             TopicArn: process.env.TOPIC_ARN ?? '',
             Message: message,
@@ -11,7 +11,7 @@ export class SNSClient {
         }
         const client = new AWS.SNS({ region: process.env.AWS_REGION ?? 'us-east-1' })
         try {
-            await client.publish(params, (err) => {
+            client.publish(params, (err) => {
                 if (err) {
                     Logger.error(`Failed to call SNS ${err}`)
                 }
