@@ -87,7 +87,7 @@ export class VoiceChannelListener implements Listener {
         const receiver = connection.receiver
         receiver.speaking.on('start', userId => {
             if (this.recordableUsers.has(userId)) {
-                const fileName: string = `./recordings/recording-${userId}-${Date.now()}.pcm`
+                const fileName: string = `./recording-${userId}-${Date.now()}.pcm`
                 const audioStream = receiver.subscribe(userId, {
                     end: {
                         behavior: EndBehaviorType.AfterSilence,
@@ -111,7 +111,7 @@ export class VoiceChannelListener implements Listener {
     private uploadVoiceRecordingToS3(fileName: string): void {
         try {
             const fileData = fs.readFileSync(fileName)
-            const s3Client: S3Client = new S3Client(process.env.VOICE_DATA_BUCKET ?? '')
+            const s3Client: S3Client = new S3Client(process.env.VOICE_RECORDING_BUCKET ?? '')
             s3Client.putFile(fileData, fileName.substring(2))
             Logger.log(`Successfully uploaded voice recording to S3: ${fileName}`, false)
         }
