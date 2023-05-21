@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node src/app.ts",
-    "build": "rimraf ./dist && tsc && cp .env ./dist/.env && cp users.json ./dist/users.json && cp voice-users.json ./dist/voice-users.json"
+    "build": "rimraf ./dist && tsc && cp .env ./dist/.env && cp users.json ./dist/users.json && cp voice-users.json ./dist/voice-users.json && cp package.json ./dist/package.json && cp package-lock.json ./dist/package-lock.json"
   },
   "repository": {
     "type": "git",
