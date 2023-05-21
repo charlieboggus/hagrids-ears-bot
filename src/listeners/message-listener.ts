@@ -5,6 +5,7 @@ import { Logger } from '../util/logger'
 import { Listener } from './listener'
 import { MessageData } from '../api/message-data'
 import { loadJsonMap } from '../util/load-json'
+import { CommandProcessor } from '../util/command-processor'
 
 export class MessageListener implements Listener {
 
@@ -16,90 +17,36 @@ export class MessageListener implements Listener {
 
     private readonly messageBatchSize: number = parseInt(process.env.MESSAGE_BATCH_SIZE as string) ?? 1000
 
-    private readonly messageBatchOverflowSize: number = 500
+    private readonly messageBatchOverflow: number = 500
 
     public attachClient(client: Client, appState: AppState): void {
         this.devMode = appState.devMode
         this.validUsers = loadJsonMap('./users.json')
+        const commandProcessor: CommandProcessor = new CommandProcessor(appState)
         client.on('messageCreate', async (receivedMessage) => {
-            if (this.isMessageCommand(receivedMessage)) {
-                const commandStr: string = receivedMessage.content
-                this.processCommand(commandStr, appState)
+            const authorId: string = receivedMessage.author.id
+            const message: string = receivedMessage.content
+            if (commandProcessor.isMessageCommand(authorId, message)) {
+                commandProcessor.processCommand(message)
             }
             else {
-                this.processMessage(receivedMessage, appState)
+                if (appState.shouldRecordMessages) {
+                    this.processMessage(receivedMessage)
+                }
             }
         })
     }
 
-    private isMessageCommand(message: Message<boolean>): boolean {
-        if (message.author.id === process.env.ADMIN_USER_ID) {
-            switch (message.content) {
-                case '$start':
-                    return true
-                case '$stop':
-                    return true
-                case '$startRecord':
-                    return true
-                case '$stopRecord':
-                    return true
-                default:
-                    return false
-            }
-        }
-        else {
-            return false
-        }
-    }
-
-    private processCommand (commandStr: string, appState: AppState): void {
-        const notify: boolean = this.devMode ? false : true
-        const command: string = commandStr.slice(1)
-        switch (command) {
-            case 'start': {
-                appState.shouldListen = true
-                Logger.log('Hagrid has started listening', notify)
-                break
-            }
-            case 'stop': {
-                appState.shouldListen = false
-                Logger.log('Hagrid has stopped listening', notify)
-                break
-            }
-            case 'startRecord': {
-                appState.shouldRecord = true
-                Logger.log('Hagrid voice recording enabled', notify)
-                break
-            }
-            case 'stopRecord': {
-                appState.shouldRecord = false
-                Logger.log('Hagrid voice recording disabled', notify)
-                break
-            }
-            default: {
-                break
-            }
-        }
-    }
-
-    private processMessage (message: Message<boolean>, appState: AppState) {
-        const notify: boolean = this.devMode ? false : true
-        // Don't process a message if the bot isn't listening
-        if (!appState.shouldListen) {
-            Logger.log('Hagrid is not listening...', notify)
-            return
-        }
-        // Don't process messages from invalid users
+    private processMessage (message: Message<boolean>) {
+        const notify: boolean = !this.devMode
         if (!this.isValidUser(message.author.id)) {
             return
         }
-        // Check for a message batch overflow -- this should never happen but better safe than sorry
-        if (this.messageBatch.length > this.messageBatchOverflowSize) {
+        if (this.messageBatch.length > this.messageBatchOverflow) {
             Logger.error('Message batch overflow', notify)
             this.messageBatch = []
             return
         }
-        // if our batch is full, ship it off to S3 otherwise batch up the message
         if (this.messageBatch.length > this.messageBatchSize) {
             if (this.devMode) {
                 Logger.log('Application in Development mode... Skipping publishing messages to S3', notify)
@@ -138,7 +85,7 @@ export class MessageListener implements Listener {
         const s3Client: S3Client = new S3Client(process.env.MESSAGE_DATA_BUCKET ?? '')
         const batchStr: string = JSON.stringify(this.messageBatch)
         s3Client.putTextObject(batchStr)
-        const notificationMessage: string = `Sent message batch to S3:\n\n${batchStr}`
+        const notificationMessage: string = `Sent message batch to S3\nSize: ${this.messageBatch.length}`
         Logger.log(notificationMessage, true)
     }
 }

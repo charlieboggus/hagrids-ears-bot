@@ -4,13 +4,13 @@ Discord bot that listens
 ## Usage:
 - Just invite the bot to your server and let it exist and it will collect data
 
-- To start message recording send the following command (admin user): ```$start```
+- To start message recording send the following command (admin user): ```$startMessages```
 
-- To pause message recording send the following command (admin user): ```$stop```
+- To pause message recording send the following command (admin user): ```$stopMessages```
 
-- To start voice channel recording send the following command (admin user): ```$startRecord```
+- To start voice channel recording send the following command (admin user): ```$startVoice```
 
-- To stop voice channel recording send the following command (admin user): ```$stopRecord```
+- To stop voice channel recording send the following command (admin user): ```$stopVoice```
 
 ## Requirements:
 
@@ -19,7 +19,8 @@ Discord bot that listens
 - example:
 ```json
 {
-    "someUserId": "name"
+    "someUserId": "name",
+    "someOtherUserId": "name"
 }
 ```
 

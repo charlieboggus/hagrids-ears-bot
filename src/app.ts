@@ -8,14 +8,13 @@ import * as dotenv from 'dotenv'
 dotenv.config()
 
 export class AppState {
+    public shouldRecordMessages: boolean
+    public shouldRecordVoice: boolean
     public readonly devMode: boolean
-    public shouldListen: boolean
-    public shouldRecord: boolean
-
     constructor() {
         this.devMode = process.env.DEVELOPMENT_MODE === 'true'
-        this.shouldListen = false
-        this.shouldRecord = false
+        this.shouldRecordMessages = false
+        this.shouldRecordVoice = false
     }
 }
 
@@ -24,7 +23,7 @@ class App {
         private readonly client: Client, 
         private readonly listeners: Listener[]
     ) {}
-
+    
     public start(state: AppState): void {
         this.listeners.forEach(listener => {
             listener.attachClient(this.client, state)
