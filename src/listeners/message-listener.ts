@@ -5,6 +5,7 @@ import { Logger } from '../util/logger'
 import { Listener } from './listener'
 import { MessageData } from '../api/message-data'
 import { loadJsonMap } from '../util/load-json'
+import { CommandProcessor } from '../util/command-processor'
 
 export class MessageListener implements Listener {
 
@@ -21,68 +22,23 @@ export class MessageListener implements Listener {
     public attachClient(client: Client, appState: AppState): void {
         this.devMode = appState.devMode
         this.validUsers = loadJsonMap('./users.json')
+        const commandProcessor: CommandProcessor = new CommandProcessor()
         client.on('messageCreate', async (receivedMessage) => {
-            if (this.isMessageCommand(receivedMessage)) {
-                const commandStr: string = receivedMessage.content
-                this.processCommand(commandStr, appState)
+            const authorId: string = receivedMessage.author.id
+            const message: string = receivedMessage.content
+            if (commandProcessor.isMessageCommand(authorId, message)) {
+                commandProcessor.processCommand(message, appState)
             }
             else {
-                this.processMessage(receivedMessage, appState)
+                if (appState.shouldRecordMessages) {
+                    this.processMessage(receivedMessage)
+                }
             }
         })
     }
 
-    private isMessageCommand(message: Message<boolean>): boolean {
-        if (message.author.id === process.env.ADMIN_USER_ID) {
-            switch (message.content) {
-                case '$start':
-                case '$stop':
-                case '$startRecord':
-                case '$stopRecord':
-                    return true
-                default:
-                    return false
-            }
-        }
-        return false
-    }
-
-    private processCommand (commandStr: string, appState: AppState): void {
+    private processMessage (message: Message<boolean>) {
         const notify: boolean = !this.devMode
-        const command: string = commandStr.slice(1)
-        switch (command) {
-            case 'start': {
-                appState.shouldRecordMessages = true
-                Logger.log('Hagrid has started listening', notify)
-                break
-            }
-            case 'stop': {
-                appState.shouldRecordMessages = false
-                Logger.log('Hagrid has stopped listening', notify)
-                break
-            }
-            case 'startRecord': {
-                appState.shouldRecordVoice = true
-                Logger.log('Hagrid voice recording enabled', notify)
-                break
-            }
-            case 'stopRecord': {
-                appState.shouldRecordVoice = false
-                Logger.log('Hagrid voice recording disabled', notify)
-                break
-            }
-            default: {
-                break
-            }
-        }
-    }
-
-    private processMessage (message: Message<boolean>, appState: AppState) {
-        const notify: boolean = !this.devMode
-        if (!appState.shouldRecordMessages) {
-            Logger.log('Hagrid is not listening...', notify)
-            return
-        }
         if (!this.isValidUser(message.author.id)) {
             return
         }
