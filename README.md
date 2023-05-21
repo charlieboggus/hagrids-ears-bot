@@ -14,7 +14,7 @@ Discord bot that listens
 
 ## Requirements:
 
-### **users.json:** & **voice-users.json**
+### **users.json & voice-users.json:**
 - JSON map  that contains the userId's and names of the users who are eligible to record.
 - ```users.json``` contains the users who are eligible for text chat recording
 - ```voice-users.json``` contains the users who are eligible for voice chat recording
