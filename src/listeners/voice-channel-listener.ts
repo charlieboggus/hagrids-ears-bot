@@ -7,8 +7,8 @@ import { Listener } from './listener'
 import { VoiceReceiver, getVoiceConnection, joinVoiceChannel } from '@discordjs/voice'
 import { loadJsonMap } from '../util/load-json'
 import { EndBehaviorType } from '@discordjs/voice'
-import * as fs from 'fs'
 import * as prism from 'prism-media'
+const MemoryStream = require('memorystream')
 
 export class VoiceChannelListener implements Listener {
 
@@ -99,17 +99,13 @@ export class VoiceChannelListener implements Listener {
             }
         })
         const decoder = new prism.opus.Decoder({ frameSize: 960, channels: 2, rate: 48000 })
-        const fileName: string = `./recording-${userId}-${Date.now()}.pcm`
-        const stream = audioStream.pipe(decoder).pipe(fs.createWriteStream(fileName))
+        const fileName: string = `recording-${userId}-${Date.now()}.pcm`
+        const ms = new MemoryStream(null, { readable: false })
+        const stream = audioStream.pipe(decoder).pipe(ms)
         stream.on('finish', () => {
-            const s3ObjectName: string = `${userId}/${fileName.substring(2)}`
-            const fileData = fs.readFileSync(fileName)
+            const s3ObjectName: string = `${userId}/${fileName}`
+            const fileData = Buffer.concat(ms.queue)
             this.uploadVoiceRecordingToS3(s3ObjectName, fileData)
-            fs.unlink(fileName, err => {
-                if (err) {
-                    Logger.error(`Failed to delete voice recording: ${err}`, !this.devMode)
-                }
-            })
         })
     }
 
