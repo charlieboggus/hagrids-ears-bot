@@ -99,11 +99,11 @@ export class VoiceChannelListener implements Listener {
             }
         })
         const decoder = new prism.opus.Decoder({ frameSize: 960, channels: 2, rate: 48000 })
-        const ms = new MemoryStream(null, { readable: false })
-        const stream = audioStream.pipe(decoder).pipe(ms)
+        const memStream = new MemoryStream(null, { readable: false })
+        const stream = audioStream.pipe(decoder).pipe(memStream)
         stream.on('finish', () => {
             const s3ObjectName: string = `${userId}/recording-${userId}-${Date.now()}.pcm`
-            const fileData: Buffer = Buffer.concat(ms.queue)
+            const fileData: Buffer = Buffer.concat(memStream.queue)
             this.uploadVoiceRecordingToS3(s3ObjectName, fileData)
         })
     }
