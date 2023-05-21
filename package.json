@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node src/app.ts",
-    "build": "rimraf ./dist && tsc && cp .env ./dist/.env && cp users.json ./dist/users.json"
+    "build": "rimraf ./dist && tsc && cp .env ./dist/.env && cp users.json ./dist/users.json && cp voice-users.json ./dist/voice-users.json"
   },
   "repository": {
     "type": "git",
@@ -29,6 +29,7 @@
     "discord.js": "14.6.0",
     "dotenv": "16.0.3",
     "libsodium-wrappers": "0.7.11",
+    "memorystream": "^0.3.1",
     "node-crc": "3.0.1",
     "opusscript": "0.0.8",
     "prism-media": "1.3.5"
