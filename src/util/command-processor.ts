@@ -2,6 +2,8 @@ import { AppState } from "../app";
 import { Logger } from "./logger";
 
 export class CommandProcessor {
+    constructor(private appState: AppState) {}
+    
     public isMessageCommand(authorId: string, message: string): boolean {
         const adminId: string = process.env.ADMIN_USER_ID ?? ''
         if (authorId === adminId) {
@@ -21,26 +23,26 @@ export class CommandProcessor {
         return false
     }
 
-    public processCommand(command: string, appState: AppState): void {
-        const notify: boolean = !appState.devMode
+    public processCommand(command: string): void {
+        const notify: boolean = !this.appState.devMode
         switch (command) {
             case '$startMessages': {
-                appState.shouldRecordMessages = true
+                this.appState.shouldRecordMessages = true
                 Logger.log('Hagrid has started listening', notify)
                 break
             }
             case '$stopMessages': {
-                appState.shouldRecordMessages = false
+                this.appState.shouldRecordMessages = false
                 Logger.log('Hagrid has stopped listening', notify)
                 break
             }
             case '$startVoice': {
-                appState.shouldRecordVoice = true
+                this.appState.shouldRecordVoice = true
                 Logger.log('Hagrid voice recording enabled', notify)
                 break
             }
             case '$stopVoice': {
-                appState.shouldRecordVoice = false
+                this.appState.shouldRecordVoice = false
                 Logger.log('Hagrid voice recording disabled', notify)
                 break
             }

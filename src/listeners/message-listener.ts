@@ -22,12 +22,12 @@ export class MessageListener implements Listener {
     public attachClient(client: Client, appState: AppState): void {
         this.devMode = appState.devMode
         this.validUsers = loadJsonMap('./users.json')
-        const commandProcessor: CommandProcessor = new CommandProcessor()
+        const commandProcessor: CommandProcessor = new CommandProcessor(appState)
         client.on('messageCreate', async (receivedMessage) => {
             const authorId: string = receivedMessage.author.id
             const message: string = receivedMessage.content
             if (commandProcessor.isMessageCommand(authorId, message)) {
-                commandProcessor.processCommand(message, appState)
+                commandProcessor.processCommand(message)
             }
             else {
                 if (appState.shouldRecordMessages) {
