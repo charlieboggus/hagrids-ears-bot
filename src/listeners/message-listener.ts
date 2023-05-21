@@ -16,7 +16,7 @@ export class MessageListener implements Listener {
 
     private readonly messageBatchSize: number = parseInt(process.env.MESSAGE_BATCH_SIZE as string) ?? 1000
 
-    private readonly messageBatchOverflowSize: number = 500
+    private readonly messageBatchOverflow: number = 500
 
     public attachClient(client: Client, appState: AppState): void {
         this.devMode = appState.devMode
@@ -36,43 +36,38 @@ export class MessageListener implements Listener {
         if (message.author.id === process.env.ADMIN_USER_ID) {
             switch (message.content) {
                 case '$start':
-                    return true
                 case '$stop':
-                    return true
                 case '$startRecord':
-                    return true
                 case '$stopRecord':
                     return true
                 default:
                     return false
             }
         }
-        else {
-            return false
-        }
+        return false
     }
 
     private processCommand (commandStr: string, appState: AppState): void {
-        const notify: boolean = this.devMode ? false : true
+        const notify: boolean = !this.devMode
         const command: string = commandStr.slice(1)
         switch (command) {
             case 'start': {
-                appState.shouldListen = true
+                appState.shouldRecordMessages = true
                 Logger.log('Hagrid has started listening', notify)
                 break
             }
             case 'stop': {
-                appState.shouldListen = false
+                appState.shouldRecordMessages = false
                 Logger.log('Hagrid has stopped listening', notify)
                 break
             }
             case 'startRecord': {
-                appState.shouldRecord = true
+                appState.shouldRecordVoice = true
                 Logger.log('Hagrid voice recording enabled', notify)
                 break
             }
             case 'stopRecord': {
-                appState.shouldRecord = false
+                appState.shouldRecordVoice = false
                 Logger.log('Hagrid voice recording disabled', notify)
                 break
             }
@@ -83,23 +78,19 @@ export class MessageListener implements Listener {
     }
 
     private processMessage (message: Message<boolean>, appState: AppState) {
-        const notify: boolean = this.devMode ? false : true
-        // Don't process a message if the bot isn't listening
-        if (!appState.shouldListen) {
+        const notify: boolean = !this.devMode
+        if (!appState.shouldRecordMessages) {
             Logger.log('Hagrid is not listening...', notify)
             return
         }
-        // Don't process messages from invalid users
         if (!this.isValidUser(message.author.id)) {
             return
         }
-        // Check for a message batch overflow -- this should never happen but better safe than sorry
-        if (this.messageBatch.length > this.messageBatchOverflowSize) {
+        if (this.messageBatch.length > this.messageBatchOverflow) {
             Logger.error('Message batch overflow', notify)
             this.messageBatch = []
             return
         }
-        // if our batch is full, ship it off to S3 otherwise batch up the message
         if (this.messageBatch.length > this.messageBatchSize) {
             if (this.devMode) {
                 Logger.log('Application in Development mode... Skipping publishing messages to S3', notify)
@@ -138,7 +129,7 @@ export class MessageListener implements Listener {
         const s3Client: S3Client = new S3Client(process.env.MESSAGE_DATA_BUCKET ?? '')
         const batchStr: string = JSON.stringify(this.messageBatch)
         s3Client.putTextObject(batchStr)
-        const notificationMessage: string = `Sent message batch to S3:\n\n${batchStr}`
+        const notificationMessage: string = `Sent message batch to S3\nSize: ${this.messageBatch.length}`
         Logger.log(notificationMessage, true)
     }
 }
