@@ -24,16 +24,14 @@ export class VoiceChannelListener implements Listener {
         this.devMode = appState.devMode
         this.validUsers = loadJsonMap('./voice-users.json')
         client.on('voiceStateUpdate', async (oldState, newState) => {
-            if (appState.shouldRecordVoice) {
-                this.handleVoiceStateChange(oldState, newState)
-            }
+            this.handleVoiceStateChange(oldState, newState, appState)
         })
     }
 
-    private handleVoiceStateChange(oldState: VoiceState, newState: VoiceState): void {
+    private handleVoiceStateChange(oldState: VoiceState, newState: VoiceState, appState: AppState): void {
         if (!oldState.channelId) { // user joins voice chat
             if (newState.member) {
-                this.userJoinVoice(newState)
+                this.userJoinVoice(newState, appState)
             }
         }
         if (!newState.channelId) { // user leaves voice chat
@@ -46,7 +44,7 @@ export class VoiceChannelListener implements Listener {
         }
     }
 
-    private userJoinVoice(voiceState: VoiceState): void {
+    private userJoinVoice(voiceState: VoiceState, appState: AppState): void {
         if (!voiceState.member) {
             return
         }
@@ -57,7 +55,7 @@ export class VoiceChannelListener implements Listener {
             this.userCount++
             this.addUserToVoiceSession(userId, displayName)
         }
-        if (this.userCount === 1) {
+        if (this.userCount === 1 && appState.shouldRecordVoice) {
             const channel = voiceState.channel
             if (channel) {
                 this.createBotVoiceConnection(channel)
