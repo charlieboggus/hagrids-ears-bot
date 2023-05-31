@@ -160,7 +160,7 @@ export class VoiceChannelListener implements Listener {
             const payload: string = JSON.stringify(voiceSessionBatch)
             const s3Client: S3Client = new S3Client(process.env.VOICE_DATA_BUCKET ?? '')
             s3Client.putTextObject(payload)
-            Logger.log(`Sent batch to Lambda function: ${payload}`, true)
+            Logger.log(`Sent Voice Session to S3: ${payload}`, true)
         }
         this.voiceSession = new Map()
     }
